@@ -6,17 +6,17 @@ const wss = new WebSocket.Server({ port: 8080 });
 console.log("WebSocket server is running on ws://localhost:8080");
 
 // API Configuration
-const API_URL = 'YOUR_API_ENDPOINT_HERE'; // Replace with your flight API endpoint
-const API_KEY = 'YOUR_API_KEY_HERE'; // Replace with your API key
+const API_BASE_URL = 'http://api.aviationstack.com/v1/flights'; 
+// will be changing this after presenting
+const API_KEY = '5d41ec81685a3d4c37557e26b00acb74'; 
 
 // Fetch Flight Data Function
 async function fetchFlightData() {
   try {
-    const response = await axios.get(API_URL, {
-      headers: {
-        'Authorization': `Bearer ${API_KEY}` // Use the required header format for your API
-      }
-    });
+    const apiUrl = `${API_BASE_URL}?access_key=${API_KEY}`;
+    console.log("Fetching data from:", apiUrl); // Debugging log
+    const response = await axios.get(apiUrl);
+    console.log("API response received:", response.data);
     return response.data;
   } catch (error) {
     console.error('Error fetching flight data:', error.message);
