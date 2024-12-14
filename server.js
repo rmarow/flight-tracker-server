@@ -1,23 +1,25 @@
 const WebSocket = require('ws');
 const axios = require('axios');
 
-// WebSocket Server
+// Create a WebSocket server on port 8080
 const wss = new WebSocket.Server({ port: 8080 });
-console.log("WebSocket server is running on ws://localhost:8080");
+console.log("WebSocket server running on ws://localhost:8080");
 
-// API Configuration
-// will be changing this after presenting
-const API_KEY = '5d41ec81685a3d4c37557e26b00acb74'; 
-const API_URL = `http://api.aviationstack.com/v1/flights?access_key=${API_KEY}&arr_iata=JFK`;
-// const API_BASE_URL = 'http://api.aviationstack.com/v1/flights'; 
+// Continental US bounding box (adjust if needed)
+const lamin = 24.7433195;   // min latitude
+const lamax = 49.3457868;   // max latitude
+const lomin = -124.7844079; // min longitude
+const lomax = -66.9513812;  // max longitude
 
-// Fetch Flight Data Function
-async function fetchFilteredFlights() {
+// OpenSky API URL with bounding box parameters
+const API_URL = `https://opensky-network.org/api/states/all?lamin=${lamin}&lomin=${lomin}&lamax=${lamax}&lomax=${lomax}`;
+
+async function fetchFlightData() {
   try {
     const response = await axios.get(API_URL);
-    return response.data;
+    return response.data; // { time: <number>, states: [ ... ] }
   } catch (error) {
-    console.error('Error fetching filtered flight data:', error.message);
+    console.error('Error fetching flight data:', error.message);
     return null;
   }
 }
@@ -31,11 +33,27 @@ function broadcastData(data) {
   });
 }
 
-// Set up interval to fetch and broadcast data every 30 seconds - the api source updates every 30-60 seconds
+// Fetch data every 30 seconds
 setInterval(async () => {
-  const flightData = await fetchFilteredFlights();
-  if (flightData) {
-    broadcastData(flightData);
+  const flightData = await fetchFlightData();
+  if (flightData && flightData.states) {
+    // flightData.states is an array of arrays representing each flight
+    // Each state array element: [icao24, callsign, origin_country, time_position, last_contact, longitude, latitude, ...]
+    // We'll map these into a simpler flight object for the client
+    const flights = flightData.states.map(state => {
+      return {
+        icao24: state[0],
+        callsign: state[1]?.trim() || "N/A",
+        origin_country: state[2],
+        longitude: state[5],
+        latitude: state[6],
+        on_ground: state[8],
+        velocity: state[9],
+        heading: state[10],
+        vertical_rate: state[11]
+      };
+    });
+    broadcastData({ flights });
   }
 }, 30000);
 
@@ -43,3 +61,4 @@ wss.on('connection', (ws) => {
   console.log("New client connected");
   ws.send(JSON.stringify({ message: "Welcome to the Flight Tracker!" }));
 });
+
