@@ -1,34 +1,35 @@
-# Real-Time Flight Visualization with p5.js and AviationStack
+# Real-Time Flight Visualization with p5.js and OpenSky Network
 
-This project visualizes live (or regularly updated) flight data using [p5.js](https://p5js.org/) and a WebSocket server. By integrating with the [AviationStack API](https://aviationstack.com/), the application fetches flight information and displays it dynamically in a browser. The server retrieves the data and broadcasts it over WebSockets, allowing the p5.js client to show current flight details without manual refreshing.
+This project provides a real-time visualization of airborne aircraft over a specified region (in this case, the continental United States) using the [OpenSky Network API](https://opensky-network.org/) and a [p5.js](https://p5js.org/) client.
 
 **Demo Sketch**:  
 [View the p5.js sketch here](https://editor.p5js.org/rmarow/sketches/Bfp2tuaQx)
 
+**Note:** This project previously used the AviationStack API. Due to rate limits and request limits, I’ve switched to the OpenSky Network API, which provides real-time ADS-B data without requiring an API key. The data is less flight-detail oriented (no direct flight numbers or scheduled times) but suitable for visualizing planes currently in the air.
+
 ## Features
 
-- **Real-Time Data Updates:** Uses a Node.js WebSocket server to periodically fetch new flight data and send it to clients instantly.
-- **AviationStack API Integration:** Leverages flight data, including departure/arrival airports, flight numbers, and times.
-- **Flexible Filtering:** Adjust your server query parameters to narrow down the flights you want to display (e.g., by arrival airport).
-- **Dynamic Visualization:** The p5.js sketch updates the canvas based on the latest data, filtering and visualizing flights as they arrive.
+- **Real-Time ADS-B Data**: Fetches live aircraft states (positions, callsigns, headings) using OpenSky’s free API.
+- **WebSocket Data Streaming**: A Node.js server requests data periodically and broadcasts it to all connected clients in real-time.
+- **Map-Based Visualization**: The p5.js client displays a map background and plots aircraft as symbols at their current positions.
+- **No API Key Required**: The OpenSky Network API endpoint used here doesn’t need an API key, avoiding rate-limit issues from previous APIs.
 
 ## How It Works
 
-1. **AviationStack API:**  
-   The server requests flight information from the AviationStack API at regular intervals. You can specify parameters such as `arr_iata=JFK` or `dep_iata=DEN` to filter data by airport, as well as `flight_status` to get currently active flights.
+1. **OpenSky API**  
+   The Node.js server queries OpenSky’s `/states/all` endpoint for all aircraft within a specified latitude/longitude bounding box.
 
-2. **WebSocket Server:**  
-   A Node.js WebSocket server (`server.js`) handles incoming data from AviationStack. After fetching the data, it broadcasts it to all connected p5.js clients.
+2. **WebSocket Server**  
+   The server (in `server.js`) runs on `ws://localhost:8080` by default. It periodically fetches data from OpenSky and broadcasts the results to any connected p5.js clients.
 
-3. **p5.js Client:**  
-   The p5.js sketch connects to the WebSocket server and listens for new data. When new flight information arrives, the sketch processes and displays it on the canvas, adjusting visuals in real-time.
+3. **p5.js Client**  
+   The p5.js sketch connects to the WebSocket server. When new data arrives, it updates the displayed aircraft positions on a map. Each aircraft is represented by a simple icon, and its callsign is shown as a label.
 
 ## Getting Started
 
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) installed.
-- A valid [AviationStack API key](https://aviationstack.com/).
 
 ### Installation
 
@@ -41,42 +42,35 @@ This project visualizes live (or regularly updated) flight data using [p5.js](ht
    ```bash
    npm install
    
-3. **Configure Your API Key: Open server.js and add your AviationStack API key. For example:**
 
-```javascript
-const API_KEY = 'YOUR_API_KEY'; 
-const API_URL = `http://api.aviationstack.com/v1/flights?access_key=${API_KEY}&arr_iata=JFK`;
-```
-
-Adjust the API_URL as needed to filter flights.
-
-4. **Run the Server:**
+3. **Run the Server:**
    ```bash
    node server.js
    
-5. **Open the p5.js Sketch:**
+4. **Open the p5.js Sketch:**
   * Go to the p5.js sketch link.
   * Click the play button (►) to run the sketch.
   * The sketch will connect to the WebSocket server and display the flights it receives.
 
 ## Customization
 
-* **Changing Airports:**
-  To show a different airport’s arrivals, update the URL in   `server.js` (for example, `&arr_iata=DEN`).
+* **Changing Region:**
+  In `server.js`, adjust the bounding box coordinates in the `API_URL` for OpenSky. By default, it uses a large bounding box that roughly covers the continental US.
 
-* **Filtering by Time or Status:**
-  After confirming the data structure from the API, you can filter flights in `server.js` before broadcasting them. This ensures the client only receives relevant data.
+* **Differeent Map Image:**
+ In `sketch.js`, replace `mapImg` with a map image of your choice. Just update the `loadImage()` URL in `preload()`.
 
-* **Adjusting Refresh Intervals:**
-  In server.js, change the setInterval duration to fetch data more or less frequently.
 
 ## Troubleshooting  
 
-* **No Data on Screen:**
-If the p5.js sketch shows no flights, check the browser console logs. It’s possible that the API is returning no flights matching your filters. Try changing airports or removing filters.
+* **WebSocket Connection Errors:**
+Ensure the server is running and that the URL in `sketch.js` matches the server’s URL and port.
 
-* **Invalid URL or API Key Errors:**
-Ensure you have a correct API key and a valid AviationStack endpoint. Test the URL in your browser or Postman.
+* **No Aircraft Shown:**
+The OpenSky API might return no data if the chosen bounding box is empty or if there’s a temporary issue. Try adjusting the bounding box or waiting for the next update.
+
+* **Rate Limits/Empty Responses:**
+OpenSky has usage limits. If you encounter issues, try increasing the interval between requests in `server.js`.
 
 ## Contributing  
 
